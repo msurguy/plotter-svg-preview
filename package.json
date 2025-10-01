@@ -1,0 +1,27 @@
+{
+  "name": "svg-paper-preview-r3f",
+  "private": true,
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "vite",
+    "start": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@react-three/drei": "10.7.6",
+    "@react-three/fiber": "9.3.0",
+    "flatten-svg": "0.3.0",
+    "leva": "0.10.0",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "svgo": "^4.0.0",
+    "three": "0.180.0",
+    "leva-file-picker": "^1.2.3"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.0.0",
+    "vite": "^7.1.5"
+  }
+}
