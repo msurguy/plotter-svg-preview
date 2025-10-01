@@ -15,6 +15,7 @@ export function useSvgTexture({
   svgParams,
   flattenControls,
   paperSize,
+  defaultSvgUrl,
 }) {
   const [svgFile, setSvgFile] = useState(null);
   const [svgSource, setSvgSource] = useState(null);
@@ -23,6 +24,7 @@ export function useSvgTexture({
   const [textureKey, setTextureKey] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const regenTimer = useRef(null);
+  const hasLoadedDefault = useRef(false);
 
   const handleSvgFileSelection = useCallback((file) => {
     if (!file) {
@@ -39,6 +41,40 @@ export function useSvgTexture({
     setIsProcessing(true);
     setSvgFile(file);
   }, []);
+
+  useEffect(() => {
+    if (!defaultSvgUrl || svgFile || hasLoadedDefault.current) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadDefaultSvg() {
+      try {
+        const response = await fetch(defaultSvgUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch default SVG (${response.status})`);
+        }
+        const blob = await response.blob();
+        const defaultName = defaultSvgUrl.split("/").filter(Boolean).pop() || "default.svg";
+        const file = new File([blob], defaultName, { type: "image/svg+xml" });
+
+        if (!cancelled) {
+          hasLoadedDefault.current = true;
+          setIsProcessing(true);
+          setSvgFile(file);
+        }
+      } catch (err) {
+        console.warn("[useSvgTexture] Failed to load default SVG", err);
+      }
+    }
+
+    loadDefaultSvg();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [defaultSvgUrl, svgFile]);
 
   useEffect(() => {
     let cancelled = false;

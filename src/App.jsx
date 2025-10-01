@@ -24,6 +24,8 @@ import { createLightingControls } from "./controls/lightingControls";
 import { formatMillimeters, formatInches } from "./utils/formatting";
 import { DEFAULT_SHADOW_MAP_SIZE } from "./constants/rendering";
 
+const DEFAULT_SVG_URL = `${import.meta.env.BASE_URL}defaultGraphic.svg`;
+
 export default function App() {
   const paperControlsConfig = useMemo(() => createPaperControls(), []);
   const materialControlsConfig = useMemo(() => createMaterialControls(), []);
@@ -63,6 +65,7 @@ export default function App() {
     svgParams,
     flattenControls,
     paperSize,
+    defaultSvgUrl: DEFAULT_SVG_URL,
   });
 
   const gridTexture = useGridTexture(gridParams, paperSize);
@@ -117,7 +120,7 @@ export default function App() {
         isProcessing={isProcessing}
       />
       <div className="app-canvas">
-        <Canvas camera={{ position: [0, 0, 0.6], fov: 35 }} shadows>
+        <Canvas camera={{ position: [0, 0, 0.6], fov: 35, near: 0.005, far: 30 }} shadows>
           <ambientLight intensity={lighting.ambientIntensity} />
           <directionalLight
             position={dirPos}
@@ -165,7 +168,15 @@ export default function App() {
             centerShift={rulerCenterShiftWorld}
           />
 
-          <OrbitControls enablePan maxPolarAngle={Math.PI / 2} minDistance={0.1} maxDistance={3.5} />
+          <OrbitControls
+            enablePan
+            minPolarAngle={0.01}
+            maxPolarAngle={Math.PI - 0.01}
+            minDistance={-1}
+            maxDistance={1}
+            minAzimuthAngle={-Math.PI / 2.1}
+            maxAzimuthAngle={Math.PI / 2.1}
+          />
         </Canvas>
       </div>
       <div className="app-leva">
