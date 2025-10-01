@@ -135,6 +135,22 @@ body,
   font-weight: 500;
 }
 
+.app-header-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  padding: 4px 0;
+  transition: color 0.15s ease;
+}
+
+.app-header-link:hover {
+  color: #2f5ace;
+}
+
 .app-header-info-value {
   font-weight: 500;
 }

@@ -52,6 +52,14 @@ export function HeaderBar({ onFileSelected, svgInfo, isProcessing = false }) {
         <InfoItem value={svgInfo.baseAndPadding} />
         <InfoItem value={svgInfo.strokeWidth} />
       </div>
+      <a
+        className="app-header-link"
+        href="https://github.com/msurguy/plotter-svg-preview/"
+        target="_blank"
+        rel="noreferrer"
+      >
+        Source ↗
+      </a>
     </header>
   );
 }
