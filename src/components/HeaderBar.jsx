@@ -8,7 +8,13 @@ function InfoItem({ value }) {
   );
 }
 
-export function HeaderBar({ onFileSelected, svgInfo, isProcessing = false }) {
+export function HeaderBar({
+  onFileSelected,
+  svgInfo,
+  isProcessing = false,
+  onToggleControls,
+  areControlsOpen = true,
+}) {
   const fileInputRef = useRef(null);
 
   const handleUploadClick = () => {
@@ -44,6 +50,16 @@ export function HeaderBar({ onFileSelected, svgInfo, isProcessing = false }) {
           className="app-header-file-input"
           onChange={handleFileChange}
         />
+        {typeof onToggleControls === "function" ? (
+          <button
+            type="button"
+            className={`app-header-controls-toggle${areControlsOpen ? " is-active" : ""}`}
+            onClick={onToggleControls}
+            aria-pressed={areControlsOpen}
+          >
+            {areControlsOpen ? "Hide Controls" : "Show Controls"}
+          </button>
+        ) : null}
       </div>
       <div className="app-header-info">
         <InfoItem value={svgInfo.fileName} />

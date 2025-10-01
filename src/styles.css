@@ -33,6 +33,7 @@ body,
   height: 100%;
   width: 100%;
   position: relative;
+  overflow-x: hidden;
 }
 
 .app-header {
@@ -69,6 +70,33 @@ body,
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.app-header-controls-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(31, 34, 43, 0.25);
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.app-header-controls-toggle.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.app-header-controls-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .app-header-upload:disabled {
@@ -162,6 +190,8 @@ body,
   padding-right: 300px;
 }
 
+
+
 .app-leva {
   position: absolute;
   top: 40px;
@@ -173,4 +203,43 @@ body,
   border-left: 1px solid rgba(31, 34, 43, 0.12);
   background: var(--leva-colors-elevation2);
   overflow: auto;
+  transition: transform 0.3s ease;
+  will-change: transform;
+  z-index: 2;
+}
+
+.app-leva--open {
+  transform: translateX(0);
+}
+
+.app-leva--closed {
+  transform: translateX(100%);
+  pointer-events: none;
+}
+
+.app-layout.leva-closed .app-canvas {
+  padding-right: 0;
+}
+
+@media (max-width: 960px) {
+  .app-layout {
+    overscroll-behavior-x: contain;
+  }
+
+  .app-header-controls-toggle {
+    display: inline-flex;
+  }
+
+  .app-header-left {
+    gap: 10px;
+  }
+
+  .app-canvas {
+    padding-right: 0;
+  }
+
+  .app-leva {
+    width: min(90vw, 320px);
+    box-shadow: -4px 0 16px rgba(31, 34, 43, 0.2);
+  }
 }

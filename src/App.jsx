@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Environment } from "@react-three/drei";
 import { useControls, Leva } from "leva";
@@ -27,6 +27,33 @@ import { DEFAULT_SHADOW_MAP_SIZE } from "./constants/rendering";
 const DEFAULT_SVG_URL = `${import.meta.env.BASE_URL}defaultGraphic.svg`;
 
 export default function App() {
+  const [isLevaOpen, setIsLevaOpen] = useState(true);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return;
+    }
+
+    const mobileQuery = window.matchMedia("(max-width: 960px)");
+    const handleChange = () => {
+      setIsLevaOpen(!mobileQuery.matches);
+    };
+
+    handleChange();
+
+    if (typeof mobileQuery.addEventListener === "function") {
+      mobileQuery.addEventListener("change", handleChange);
+      return () => mobileQuery.removeEventListener("change", handleChange);
+    }
+
+    mobileQuery.addListener(handleChange);
+    return () => mobileQuery.removeListener(handleChange);
+  }, []);
+
+  const toggleLeva = () => {
+    setIsLevaOpen((prev) => !prev);
+  };
+
   const paperControlsConfig = useMemo(() => createPaperControls(), []);
   const materialControlsConfig = useMemo(() => createMaterialControls(), []);
   const noiseControlsConfig = useMemo(() => createNoiseControls(), []);
@@ -113,11 +140,13 @@ export default function App() {
   }, [scaleInfo, strokeInfo, svgFile]);
 
   return (
-    <div className="app-layout">
+    <div className={`app-layout ${isLevaOpen ? "leva-open" : "leva-closed"}`}>
       <HeaderBar
         onFileSelected={handleSvgFileSelection}
         svgInfo={svgHeaderInfo}
         isProcessing={isProcessing}
+        onToggleControls={toggleLeva}
+        areControlsOpen={isLevaOpen}
       />
       <div className="app-canvas">
         <Canvas camera={{ position: [0, 0, 0.6], fov: 35, near: 0.005, far: 30 }} shadows>
@@ -179,7 +208,7 @@ export default function App() {
           />
         </Canvas>
       </div>
-      <div className="app-leva">
+      <div className={`app-leva${isLevaOpen ? " app-leva--open" : " app-leva--closed"}`}>
         <Leva oneLineLabels collapsed={false} fill flat titleBar={false} />
       </div>
     </div>
