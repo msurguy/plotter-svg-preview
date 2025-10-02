@@ -57,6 +57,60 @@ function serializeMatrix(matrix) {
   return { a: matrix.a, b: matrix.b, c: matrix.c, d: matrix.d, e: matrix.e, f: matrix.f };
 }
 
+function extractStrokeColor(element) {
+  if (!element) return null;
+
+  let stroke = null;
+
+  // Try direct attribute first
+  stroke = element.getAttribute('stroke');
+
+  // Check for inline style
+  if (!stroke || stroke === 'none') {
+    const styleAttr = element.getAttribute('style');
+    if (styleAttr) {
+      const strokeMatch = styleAttr.match(/stroke\s*:\s*([^;]+)/);
+      if (strokeMatch) {
+        stroke = strokeMatch[1].trim();
+      }
+    }
+  }
+
+  // Try computed style if available
+  if (!stroke || stroke === 'none') {
+    try {
+      const computedStyle = window.getComputedStyle(element);
+      if (computedStyle.stroke && computedStyle.stroke !== 'none') {
+        stroke = computedStyle.stroke;
+      }
+    } catch (e) {
+      // getComputedStyle might not be available
+    }
+  }
+
+  // If still no stroke, check fill as fallback
+  if (!stroke || stroke === 'none') {
+    stroke = element.getAttribute('fill');
+    if (!stroke || stroke === 'none') {
+      try {
+        const computedStyle = window.getComputedStyle(element);
+        if (computedStyle.fill && computedStyle.fill !== 'none') {
+          stroke = computedStyle.fill;
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
+
+  // Normalize 'none' to null
+  if (!stroke || stroke === 'none') {
+    return null;
+  }
+
+  return stroke;
+}
+
 export function yieldToBrowser() {
   return new Promise((resolve) => {
     if (typeof window === "undefined") {
@@ -139,7 +193,8 @@ async function computeStrokeGeometryWithPath2D(svgText) {
       }
 
       const ctm = serializeMatrix(shape.getCTM?.());
-      pathEntries.push({ path, matrix: ctm });
+      const strokeColor = extractStrokeColor(shape);
+      pathEntries.push({ path, matrix: ctm, color: strokeColor });
 
       try {
         const bbox = shape.getBBox();
@@ -192,45 +247,74 @@ function computeStrokeGeometryLegacy(svgText, maxError) {
   const svgEl = doc.documentElement;
   if (!svgEl) return null;
 
-  const lines = flattenSVG(svgEl, { maxError }) || [];
-  if (!lines.length) {
-    return null;
+  const sandbox = ensureSvgSandbox();
+  if (sandbox) {
+    sandbox.appendChild(svgEl);
   }
 
-  const path = new Path2D();
-
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-
-  for (const line of lines) {
-    const pts = line.points;
-    if (!pts || pts.length < 2) continue;
-    path.moveTo(pts[0].x, pts[0].y);
-    for (let i = 1; i < pts.length; i++) {
-      const { x, y } = pts[i];
-      path.lineTo(x, y);
+  try {
+    const lines = flattenSVG(svgEl, { maxError }) || [];
+    if (!lines.length) {
+      return null;
     }
 
-    for (const point of pts) {
-      const { x, y } = point;
-      if (!isFinite(x) || !isFinite(y)) continue;
-      if (x < minX) minX = x;
-      if (y < minY) minY = y;
-      if (x > maxX) maxX = x;
-      if (y > maxY) maxY = y;
+    // Group lines by their stroke color to preserve colors
+    const pathEntries = [];
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    // Build a map of stroke colors to their lines
+    const colorMap = new Map();
+    for (const line of lines) {
+      // flatten-svg library returns stroke color directly on the line object
+      const strokeColor = line.stroke || null;
+      if (!colorMap.has(strokeColor)) {
+        colorMap.set(strokeColor, []);
+      }
+      colorMap.get(strokeColor).push(line);
+    }
+
+    // Create a path for each color
+    for (const [strokeColor, colorLines] of colorMap) {
+      const path = new Path2D();
+
+      for (const line of colorLines) {
+        const pts = line.points;
+        if (!pts || pts.length < 2) continue;
+        path.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) {
+          const { x, y } = pts[i];
+          path.lineTo(x, y);
+        }
+
+        for (const point of pts) {
+          const { x, y } = point;
+          if (!isFinite(x) || !isFinite(y)) continue;
+          if (x < minX) minX = x;
+          if (y < minY) minY = y;
+          if (x > maxX) maxX = x;
+          if (y > maxY) maxY = y;
+        }
+      }
+
+      pathEntries.push({ path, matrix: null, color: strokeColor });
+    }
+
+    if (!pathEntries.length || !isFinite(minX) || !isFinite(minY) || !isFinite(maxX) || !isFinite(maxY)) {
+      return null;
+    }
+
+    return {
+      pathEntries,
+      bounds: boundsFromExtents(minX, minY, maxX, maxY),
+    };
+  } finally {
+    if (sandbox && svgEl.parentNode === sandbox) {
+      sandbox.removeChild(svgEl);
     }
   }
-
-  if (!isFinite(minX) || !isFinite(minY) || !isFinite(maxX) || !isFinite(maxY)) {
-    return null;
-  }
-
-  return {
-    pathEntries: [{ path, matrix: null }],
-    bounds: boundsFromExtents(minX, minY, maxX, maxY),
-  };
 }
 
 export async function getFlattenedGeometry(svgText, maxError) {
@@ -281,6 +365,7 @@ export async function flattenAndRasterizeSvg(
     lineCap = "round",
     lineJoin = "round",
     miterLimit = 4,
+    preserveColors = false,
   } = {}
 ) {
   const flattened = await getFlattenedGeometry(svgText, maxError);
@@ -301,7 +386,9 @@ export async function flattenAndRasterizeSvg(
   ctx.lineCap = lineCap;
   ctx.lineJoin = lineJoin;
   ctx.miterLimit = miterLimit;
-  ctx.strokeStyle = strokeColor;
+  if (!preserveColors) {
+    ctx.strokeStyle = strokeColor;
+  }
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
 
@@ -346,7 +433,7 @@ export async function flattenAndRasterizeSvg(
   ctx.translate(-centerX, -centerY);
 
   for (const entry of pathEntries) {
-    const { path, matrix } = entry;
+    const { path, matrix, color } = entry;
     if (!path) continue;
 
     let entryScale = 1;
@@ -357,6 +444,11 @@ export async function flattenAndRasterizeSvg(
     }
 
     ctx.lineWidth = strokeWidthPx / (globalScale * entryScale);
+
+    // Set color for this path if preserveColors is enabled
+    if (preserveColors && color) {
+      ctx.strokeStyle = color;
+    }
 
     ctx.save();
     if (matrix) {

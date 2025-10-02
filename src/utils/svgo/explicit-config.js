@@ -22,7 +22,7 @@ export const INPUT_PRESERVE = {
 
     removeUnknownsAndDefaults: { enabled: true },
     removeNonInheritableGroupAttrs: { enabled: true },
-    removeUselessStrokeAndFill: { enabled: true },
+    removeUselessStrokeAndFill: { enabled: false },
     cleanupEnableBackground: { enabled: true },
 
     removeHiddenElems: { enabled: true },
