@@ -332,6 +332,10 @@ export function useSvgTexture({
             lineJoin: flattenControls.lineJoin,
             miterLimit: flattenControls.miterLimit,
             preserveColors: flattenControls.preserveColors,
+            inkBlending: flattenControls.inkBlending,
+            blendMode: flattenControls.blendMode,
+            inkOpacity: flattenControls.inkOpacity,
+            edgeDarkening: flattenControls.edgeDarkening,
           });
         } else {
           result = await rasterizeSvg(svgText, commonOpts);
@@ -391,6 +395,10 @@ export function useSvgTexture({
     flattenControls.lineJoin,
     flattenControls.miterLimit,
     flattenControls.preserveColors,
+    flattenControls.inkBlending,
+    flattenControls.blendMode,
+    flattenControls.inkOpacity,
+    flattenControls.edgeDarkening,
     flattenStrokeWidthPx,
   ]);
 

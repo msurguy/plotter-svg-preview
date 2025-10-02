@@ -366,6 +366,10 @@ export async function flattenAndRasterizeSvg(
     lineJoin = "round",
     miterLimit = 4,
     preserveColors = false,
+    inkBlending = false,
+    blendMode = "multiply",
+    inkOpacity = 0.85,
+    edgeDarkening = 0.3,
   } = {}
 ) {
   const flattened = await getFlattenedGeometry(svgText, maxError);
@@ -386,9 +390,18 @@ export async function flattenAndRasterizeSvg(
   ctx.lineCap = lineCap;
   ctx.lineJoin = lineJoin;
   ctx.miterLimit = miterLimit;
+
+  // Set base stroke style
   if (!preserveColors) {
     ctx.strokeStyle = strokeColor;
   }
+
+  // Apply ink blending settings
+  if (inkBlending) {
+    ctx.globalCompositeOperation = blendMode;
+    ctx.globalAlpha = inkOpacity;
+  }
+
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
 
@@ -443,7 +456,8 @@ export async function flattenAndRasterizeSvg(
       entryScale = Math.sqrt(Math.max(1e-12, sx * sy));
     }
 
-    ctx.lineWidth = strokeWidthPx / (globalScale * entryScale);
+    const lineWidth = strokeWidthPx / (globalScale * entryScale);
+    ctx.lineWidth = lineWidth;
 
     // Set color for this path if preserveColors is enabled
     if (preserveColors && color) {
@@ -454,7 +468,25 @@ export async function flattenAndRasterizeSvg(
     if (matrix) {
       ctx.transform(matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f);
     }
+
+    // Draw main stroke
     ctx.stroke(path);
+
+    // Add watercolor edge darkening effect
+    if (inkBlending && edgeDarkening > 0) {
+      const prevAlpha = ctx.globalAlpha;
+      const prevLineWidth = ctx.lineWidth;
+
+      // Draw darker, thinner edge to simulate watercolor bloom
+      ctx.globalAlpha = prevAlpha * edgeDarkening;
+      ctx.lineWidth = prevLineWidth * 0.6;
+      ctx.stroke(path);
+
+      // Restore
+      ctx.globalAlpha = prevAlpha;
+      ctx.lineWidth = prevLineWidth;
+    }
+
     ctx.restore();
   }
   ctx.restore();
